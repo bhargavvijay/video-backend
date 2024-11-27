@@ -31,7 +31,7 @@ router.post('/upload-audio', upload.single('audio'), async (req, res) => {
 
   // Normalize and validate input
   const userId = req.body.userId || null;
-  const meetingId = req.body.meetingId || null;
+  const meetingId = req.body.meetingId ||req.body.roomId|| null;
 
   if (!req.file) {
     console.error('No audio file uploaded');
