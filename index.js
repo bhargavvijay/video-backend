@@ -1,28 +1,34 @@
 const express = require('express');
 const connectDB = require('./db');
-const path = require('path'); // Import the path module
-const uploadAudioRoute = require('./routes/uploadAudioRoute');
-const cors = require('cors'); // Import cors
-require('dotenv').config();
+const path = require('path');
+const cors = require('cors'); // Import CORS middleware
+const uploadAudioRoute = require('./routes/uploadAudioRoute'); // Import the upload route
 
+require('dotenv').config(); // Load environment variables
+
+// Connect to MongoDB
 connectDB();
 
 const app = express();
 
-// Middleware to parse JSON
+// Middleware to parse JSON and enable CORS
 app.use(express.json());
-
-// Enable CORS
 app.use(cors({
-    origin: 'https://bhargavvijay.github.io', // Replace with your frontend origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+  origin: 'https://bhargavvijay.github.io', // Replace with your frontend's domain
+  methods: ['GET', 'POST'],
 }));
 
 // Serve uploaded audio files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Add your routes
+// Add audio upload route
 app.use(uploadAudioRoute);
 
+// Fallback route for undefined endpoints
+app.use((req, res) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
+// Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
