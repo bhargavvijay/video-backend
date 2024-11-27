@@ -22,7 +22,8 @@ const router = express.Router();
  */
 router.post('/upload-audio', upload.single('audio'), async (req, res) => {
   const { userId, meetingId } = req.body;
-  console.log('here')
+
+  console.log(req.body);
   // Validate input
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file uploaded' });
