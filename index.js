@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin:'https://bhargavvijay.github.io/Video-Chat/', // Replace with your frontend's domain
+    origin:'*', // Replace with your frontend's domain
     methods: ['GET', 'POST'],
   })
 );
