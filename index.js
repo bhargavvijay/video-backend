@@ -1,12 +1,12 @@
 const express = require('express');
 const connectDB = require('./db');
 const path = require('path');
-const cors = require('cors'); // Import CORS middleware
-const uploadAudioRoute = require('./routes/uploadAudioRoute'); // Import the upload route
+const cors = require('cors');
+const uploadAudioRoute = require('./routes/uploadAudioRoute');
 const Meeting = require('./models/Meeting');
-const Audio = require('./models/Audio'); // Ensure Audio model is imported
-const {AssemblyAI} = require('assemblyai');
-require('dotenv').config(); // Load environment variables
+const Audio = require('./models/Audio');
+const { AssemblyAI } = require('assemblyai');
+require('dotenv').config();
 
 // Connect to MongoDB
 connectDB();
@@ -17,7 +17,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin:'*', // Replace with your frontend's domain
+    origin: '*',
     methods: ['GET', 'POST'],
   })
 );
@@ -30,34 +30,42 @@ app.use(uploadAudioRoute);
 
 // AssemblyAI Client Initialization
 const assemblyClient = new AssemblyAI({
-  apiKey: process.env.ASSEMBLY_AI_KEY, // Use environment variable
+  apiKey: process.env.ASSEMBLY_AI_KEY,
 });
 
-// Function to start transcription
-const startTranscripting = async (meetingId) => 
-  {
+// Function to start transcription and summarization
+const startTranscripting = async (meetingId) => {
   try {
-    const audio = await Audio.findOne({ meetingId }).sort({ createdAt: -1 }); // Fetch the latest audio file
+    const audio = await Audio.findOne({ meetingId }).sort({ createdAt: -1 });
     if (!audio) {
       console.error('No audio file found for this meeting.');
       return;
     }
 
-    console.log(audio);
+    console.log(`Starting transcription for audio: ${audio.audioUrl}`);
 
-    const audioUrl = audio.audioUrl;
-    console.log(`Starting transcription for audio: ${audioUrl}`);
-
-    const transcriptConfig = { audio_url: audioUrl };
+    const transcriptConfig = { audio_url: audio.audioUrl };
     const transcript = await assemblyClient.transcripts.transcribe(transcriptConfig);
 
     console.log('Transcription complete:', transcript.text);
-    // Save the transcription result if needed
+
+    // Import summarization pipeline dynamically (fixing ES module issue)
+    const { pipeline } = await import("@xenova/transformers");
+    const summarizationPipeline = await pipeline("summarization");
+
+    console.log("Generating summary...");
+    const summaryResult = await summarizationPipeline(transcript.text);
+    const summary = summaryResult[0].summary_text;
+
+    console.log("Summary:", summary);
+
+    // Update Meeting document with summary
+    await Meeting.updateOne({ _id: meetingId }, { $set: { summary, transcript: transcript.text } });
+
   } catch (error) {
-    console.error('Error during transcription:', error);
+    console.error('Error during transcription/summarization:', error);
   }
 };
-
 
 // Route to create a meeting
 app.post('/create-meeting', async (req, res) => {
@@ -73,7 +81,7 @@ app.post('/create-meeting', async (req, res) => {
 
     res.status(201).json({
       message: 'Meeting created successfully',
-      roomId: newMeeting._id, // MongoDB _id
+      roomId: newMeeting._id,
     });
   } catch (error) {
     console.error('Error creating meeting:', error);
@@ -99,7 +107,7 @@ app.post('/end-meeting', async (req, res) => {
     meeting.ended = true;
     await meeting.save();
 
-    // Start transcription
+    // Start transcription and summarization
     startTranscripting(roomId);
 
     res.status(200).json({ message: 'Meeting ended successfully', roomId: meeting._id });
@@ -127,6 +135,26 @@ app.get('/meeting-exists/:id', async (req, res) => {
   } catch (error) {
     console.error('Error checking meeting existence:', error);
     res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// Route to fetch transcript & summary for a meeting
+app.get('/meeting-summary/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const meeting = await Meeting.findOne({ _id: id });
+
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+
+    res.status(200).json({
+      transcript: meeting.transcript || "No transcript available",
+      summary: meeting.summary || "No summary available",
+    });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ error: 'Server Error' });
   }
 });
 
