@@ -6,6 +6,7 @@ const uploadAudioRoute = require('./routes/uploadAudioRoute');
 const Meeting = require('./models/Meeting');
 const Audio = require('./models/Audio');
 const { AssemblyAI } = require('assemblyai');
+const axios = require('axios');
 require('dotenv').config();
 
 // Connect to MongoDB
@@ -49,13 +50,13 @@ const startTranscripting = async (meetingId) => {
 
     console.log('Transcription complete:', transcript.text);
 
-    // Import summarization pipeline dynamically (fixing ES module issue)
-    const { pipeline } = await import("@xenova/transformers");
-    const summarizationPipeline = await pipeline("summarization");
+    // Send transcript text to the external summarization API
+    console.log("Sending text for summarization...");
+    const summaryResponse = await axios.post('https://s1-x34r.onrender.com/summarize', {
+      text: transcript.text
+    });
 
-    console.log("Generating summary...");
-    const summaryResult = await summarizationPipeline(transcript.text);
-    const summary = summaryResult[0].summary_text;
+    const summary = summaryResponse.data.summary || "Summary not available";
 
     console.log("Summary:", summary);
 
