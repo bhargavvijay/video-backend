@@ -37,7 +37,9 @@ const assemblyClient = new AssemblyAI({
 // Function to start transcription and summarization
 const startTranscripting = async (meetingId) => {
   try {
+    console.log(meetingId);
     const audio = await Audio.findOne({ meetingId }).sort({ createdAt: -1 });
+    console.log(audio);
     if (!audio) {
       console.error('No audio file found for this meeting.');
       return;
