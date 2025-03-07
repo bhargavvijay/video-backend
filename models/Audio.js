@@ -19,6 +19,10 @@ const AudioSchema = new mongoose.Schema({
     type: Date,
     default: Date.now, // Automatically set to the current date and time
   },
+  transcriptText: {
+    type: String,
+    required: false, // The text of the audio transcript
+  }
 });
 
 // Create the Audio model

@@ -51,6 +51,10 @@ const startTranscripting = async (meetingId) => {
     const transcript = await assemblyClient.transcripts.transcribe(transcriptConfig);
 
     console.log('Transcription complete:', transcript.text);
+    const meetingAudio = await Audio
+      .findOne({ meetingId });
+    meetingAudio.transcriptText = transcript.text;
+    await meetingAudio.save();
 
     // Send transcript text to the external summarization API
     console.log("Sending text for summarization...");
