@@ -114,7 +114,6 @@ app.post('/end-meeting', async (req, res) => {
     meeting.ended = true;
     await meeting.save();
 
-    console.log(`Meeting ${roomId} ended`);
     // Start transcription and summarization
     startTranscripting(roomId);
 
