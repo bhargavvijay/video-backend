@@ -165,6 +165,21 @@ app.get('/meeting-summary/:id', async (req, res) => {
   }
 });
 
+app.get('/meeting-transcript/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const audio = await audio
+      .findOne({ meetingId: id });
+
+      res.status(200).json({
+        transcript: audio.transcriptText || "No transcript available",
+      });
+    }
+    catch (error) {
+      console.error('Error fetching transcript:', error);
+      res.status(500).json({ error: 'Server Error' });
+    }});
+
 // Fallback route for undefined endpoints
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
