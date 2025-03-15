@@ -170,7 +170,7 @@ app.get('/meeting-transcript/:id', async (req, res) => {
   const { id } = req.params;
   console.log(id);
   try {
-    const audio = await audio
+    const audio = await Audio
       .findOne({ meetingId: id });
 
       res.status(200).json({
