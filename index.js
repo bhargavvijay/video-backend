@@ -7,6 +7,7 @@ const Meeting = require('./models/Meeting');
 const Audio = require('./models/Audio');
 const { AssemblyAI } = require('assemblyai');
 const axios = require('axios');
+const { constrainedMemory } = require('process');
 require('dotenv').config();
 
 // Connect to MongoDB
@@ -167,6 +168,7 @@ app.get('/meeting-summary/:id', async (req, res) => {
 
 app.get('/meeting-transcript/:id', async (req, res) => {
   const { id } = req.params;
+  console.log(id);
   try {
     const audio = await audio
       .findOne({ meetingId: id });
