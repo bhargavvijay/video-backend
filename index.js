@@ -7,6 +7,7 @@ const Meeting = require('./models/Meeting');
 const Audio = require('./models/Audio');
 const { AssemblyAI } = require('assemblyai');
 const axios = require('axios');
+const {spawn} = require('child_process');
 const { constrainedMemory } = require('process');
 require('dotenv').config();
 
@@ -36,44 +37,78 @@ const assemblyClient = new AssemblyAI({
 });
 
 // Function to start transcription and summarization
+
+// index.js (or any other JS file in your Node.js app)
+
+
 const startTranscripting = async (meetingId) => {
   try {
     console.log(meetingId);
-    const audio = await Audio.findOne({ meetingId }).sort({ createdAt: -1 });
-    console.log(audio);
-    if (!audio) {
+    const audios = await Audio.find({ meetingId });
+    if (!audios) {
       console.error('No audio file found for this meeting.');
       return;
     }
 
-    console.log(`Starting transcription for audio: ${audio.audioUrl}`);
+    let transcripts={}
+    const roles = {
+      "user1": "attendee",
+      "user2": "moderator"
+  };
+    for(let i=0; i < audios.length; i++){
+      const audio = audios[i];
+      console.log(`Starting transcription for audio: ${audio.audioUrl}`);
+      const transcriptConfig = { audio_url: audio.audioUrl };
+      const transcript = await assemblyClient.transcripts.transcribe(transcriptConfig);
+      console.log('Transcription complete:', transcript.text);
+      audio.transcriptText = transcript.text;
+      await audio.save();
+      transcripts["user"+(i+1)] = transcript.text;
+    }
 
-    const transcriptConfig = { audio_url: audio.audioUrl };
-    const transcript = await assemblyClient.transcripts.transcribe(transcriptConfig);
-
-    console.log('Transcription complete:', transcript.text);
-    const meetingAudio = await Audio
-      .findOne({ meetingId });
-    meetingAudio.transcriptText = transcript.text;
-    await meetingAudio.save();
-
-    // Send transcript text to the external summarization API
-    console.log("Sending text for summarization...");
-    const summaryResponse = await axios.post('https://s1-x34r.onrender.com/summarize', {
-      text: transcript.text
+    const pythonScriptPath =  './app.py' // Adjust the path accordingly
+    
+    // Spawn the Python process
+    const pythonProcess = spawn('python', [pythonScriptPath]);
+    
+    // Send the JSON data via stdin
+    const inputData = JSON.stringify({ transcripts, roles });
+    pythonProcess.stdin.write(inputData);
+    pythonProcess.stdin.end();
+    
+    // Capture and display Python script output
+    pythonProcess.stdout.on('data', (data) => {
+        console.log(`Output from Python script:\n${data}`);
+    });
+    
+    // Handle errors
+    pythonProcess.stderr.on('data', (data) => {
+        console.error(`Error from Python script: ${data}`);
+    });
+    
+    pythonProcess.on('close', (code) => {
+        console.log(`Python script finished with exit code ${code}`);
     });
 
-    const summary = summaryResponse.data.summary || "Summary not available";
+    
+    // // Send transcript text to the external summarization API
+    // console.log("Sending text for summarization...");
+    // const summaryResponse = await axios.post('https://s1-x34r.onrender.com/summarize', {
+    //   text: transcript.text
+    // });
 
-    console.log("Summary:", summary);
-
-    // Update Meeting document with summary
-    await Meeting.updateOne({ _id: meetingId }, { $set: { summary, transcript: transcript.text } });
+    
+    // const summary = summaryResponse.data.summary || "Summary not available";
+    // console.log("Summary:", summary);
+    // // Update Meeting document with summary
+    // await Meeting.updateOne({ _id: meetingId }, { $set: { summary, transcript: transcript.text } });
 
   } catch (error) {
     console.error('Error during transcription/summarization:', error);
   }
 };
+
+startTranscripting("67eaae50f9ae52947a58ae94"); // Example meetingId, replace with actual
 
 // Route to create a meeting
 app.post('/create-meeting', async (req, res) => {
