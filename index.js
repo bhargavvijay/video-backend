@@ -66,29 +66,29 @@ const startTranscripting = async (meetingId) => {
       transcripts["user"+(i+1)] = transcript.text;
     }
 
-    const pythonScriptPath =  './app.py' // Adjust the path accordingly
+    // const pythonScriptPath =  './app.py' // Adjust the path accordingly
     
-    // Spawn the Python process
-    const pythonProcess = spawn('python', [pythonScriptPath]);
+    // // Spawn the Python process
+    // const pythonProcess = spawn('python', [pythonScriptPath]);
     
-    // Send the JSON data via stdin
-    const inputData = JSON.stringify({ transcripts, roles });
-    pythonProcess.stdin.write(inputData);
-    pythonProcess.stdin.end();
+    // // Send the JSON data via stdin
+    // const inputData = JSON.stringify({ transcripts, roles });
+    // pythonProcess.stdin.write(inputData);
+    // pythonProcess.stdin.end();
     
-    // Capture and display Python script output
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`Output from Python script:\n${data}`);
-    });
+    // // Capture and display Python script output
+    // pythonProcess.stdout.on('data', (data) => {
+    //     console.log(`Output from Python script:\n${data}`);
+    // });
     
-    // Handle errors
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Error from Python script: ${data}`);
-    });
+    // // Handle errors
+    // pythonProcess.stderr.on('data', (data) => {
+    //     console.error(`Error from Python script: ${data}`);
+    // });
     
-    pythonProcess.on('close', (code) => {
-        console.log(`Python script finished with exit code ${code}`);
-    });
+    // pythonProcess.on('close', (code) => {
+    //     console.log(`Python script finished with exit code ${code}`);
+    // });
 
     
     // // Send transcript text to the external summarization API
