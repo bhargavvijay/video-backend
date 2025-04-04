@@ -108,7 +108,6 @@ const startTranscripting = async (meetingId) => {
   }
 };
 
-startTranscripting("67eaae50f9ae52947a58ae94"); // Example meetingId, replace with actual
 
 // Route to create a meeting
 app.post('/create-meeting', async (req, res) => {
