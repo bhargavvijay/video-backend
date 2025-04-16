@@ -98,7 +98,7 @@ const startTranscripting = async (meetingId) => {
     
     console.log(transcripts) 
 
-    const summaryResponse = await axios.post('https://4816-2409-40f2-48-fab2-ac7d-28e9-e721-e339.ngrok-free.app/summarize', {
+    const summaryResponse = await axios.post('https://0633-2401-4900-22e1-d61c-cd28-e1d9-7603-5672.ngrok-free.app/summarize', {
       transcripts,
       roles
     });
@@ -266,7 +266,7 @@ app.get('/meeting-transcript/:id', async (req, res) => {
     let conversation = "Not available";
     try {
       const convoRes = await axios.post(
-        'https://4816-2409-40f2-48-fab2-ac7d-28e9-e721-e339.ngrok-free.app/convert-to-conversation',
+        'https://0633-2401-4900-22e1-d61c-cd28-e1d9-7603-5672.ngrok-free.app/convert-to-conversation',
         {
           transcripts: {
             user1: transcripts[0],
