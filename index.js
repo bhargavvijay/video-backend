@@ -11,12 +11,10 @@ const {spawn} = require('child_process');
 const { constrainedMemory } = require('process');
 require('dotenv').config();
 
-// Connect to MongoDB
 connectDB();
 
 const app = express();
 
-// Middleware to parse JSON and enable CORS
 app.use(express.json());
 app.use(
   cors({
@@ -25,20 +23,27 @@ app.use(
   })
 );
 
-// Serve uploaded audio files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Add audio upload route
 app.use(uploadAudioRoute);
 
-// AssemblyAI Client Initialization
 const assemblyClient = new AssemblyAI({
   apiKey: process.env.ASSEMBLY_AI_KEY,
 });
 
-// Function to start transcription and summarization
 
-// index.js (or any other JS file in your Node.js app)
+
+const deleteMany = async () => {
+  try {
+    const result = await Meeting.deleteMany({}); // Delete all documents
+    console.log(`${result.deletedCount} documents deleted.`);
+  } catch (error) {
+    console.error('Error deleting documents:', error);
+  }
+}
+
+
+// deleteMany()
 
 
 const startTranscripting = async (meetingId) => {
@@ -50,7 +55,10 @@ const startTranscripting = async (meetingId) => {
       return;
     }
 
-    let transcripts={}
+    let transcripts={
+      "user1": null,
+      "user2": null
+    }
     const roles = {
       "user1": "attendee",
       "user2": "moderator"
@@ -60,35 +68,60 @@ const startTranscripting = async (meetingId) => {
       console.log(`Starting transcription for audio: ${audio.audioUrl}`);
       const transcriptConfig = { audio_url: audio.audioUrl };
       const transcript = await assemblyClient.transcripts.transcribe(transcriptConfig);
+
       console.log('Transcription complete:', transcript.text);
       audio.transcriptText = transcript.text;
+      //console.log(audio)
       await audio.save();
-      transcripts["user"+(i+1)] = transcript.text;
+      transcripts["user" + (i + 1)] = transcript.text;
     }
 
-    const pythonScriptPath =  './app.py' // Adjust the path accordingly
-    
-    // Spawn the Python process
-    const pythonProcess = spawn('python', [pythonScriptPath]);
-    
-    // Send the JSON data via stdin
-    const inputData = JSON.stringify({ transcripts, roles });
-    pythonProcess.stdin.write(inputData);
-    pythonProcess.stdin.end();
-    
-    // Capture and display Python script output
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(`Output from Python script:\n${data}`);
+    console.log(transcripts) 
+
+    const summaryResponse = await axios.post('https://4816-2409-40f2-48-fab2-ac7d-28e9-e721-e339.ngrok-free.app/summarize', {
+      transcripts,
+      roles
     });
+    const summary = summaryResponse.data 
+    console.log(summary)
+    const meeting = await Meeting.findOne({ _id: meetingId });
+    if (!meeting) {
+      console.error('Meeting not found.');
+      return;
+    }
+
+  if (!meeting.roleSummaries) {
+  meeting.roleSummaries = new Map();
+  }
+
+  for (const [role, summaryText] of Object.entries(summary)) {
+    meeting.roleSummaries.set(role, summaryText);
+  }
+
+    await meeting.save();
+    console.log("Meeting updated with summary:", meeting.roleSummaries);
+
+
+    // const pythonProcess = spawn('python', [pythonScriptPath]);
     
-    // Handle errors
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Error from Python script: ${data}`);
-    });
     
-    pythonProcess.on('close', (code) => {
-        console.log(`Python script finished with exit code ${code}`);
-    });
+    // const inputData = JSON.stringify({ transcripts, roles });
+    // pythonProcess.stdin.write(inputData);
+    // pythonProcess.stdin.end();
+    
+    
+    // pythonProcess.stdout.on('data', (data) => {
+    //     console.log(`Output from Python script:\n${data}`);
+    // });
+    
+    
+    // pythonProcess.stderr.on('data', (data) => {
+    //     console.error(`Error from Python script: ${data}`);
+    // });
+    
+    // pythonProcess.on('close', (code) => {
+    //     console.log(`Python script finished with exit code ${code}`);
+    // });
 
     
     // // Send transcript text to the external summarization API
@@ -108,7 +141,9 @@ const startTranscripting = async (meetingId) => {
   }
 };
 
-startTranscripting("67eaae50f9ae52947a58ae94"); // Example meetingId, replace with actual
+startTranscripting("67ff2cde06d880e51c243880"); 
+
+
 
 // Route to create a meeting
 app.post('/create-meeting', async (req, res) => {
@@ -132,7 +167,6 @@ app.post('/create-meeting', async (req, res) => {
   }
 });
 
-// Route to end a meeting
 app.post('/end-meeting', async (req, res) => {
   try {
     const { roomId } = req.body;
@@ -150,7 +184,6 @@ app.post('/end-meeting', async (req, res) => {
     meeting.ended = true;
     await meeting.save();
 
-    // Start transcription and summarization
     startTranscripting(roomId);
 
     res.status(200).json({ message: 'Meeting ended successfully', roomId: meeting._id });
@@ -206,16 +239,21 @@ app.get('/meeting-transcript/:id', async (req, res) => {
   console.log(id);
   try {
     const audio = await Audio
-      .findOne({ meetingId: id });
-
+      .find({ meetingId: id });
+    const transcripts=[];
+    for(let i=0; i < audio.length; i++){
+      transcripts.push(audio[i].transcriptText);
+    }
+    const meeting = await Meeting.findOne({ _id: id });
       res.status(200).json({
-        transcript: audio.transcriptText || "No transcript available",
+        transcripts,
+        summary: meeting.roleSummaries || "No summary available",
       });
     }
     catch (error) {
       console.error('Error fetching transcript:', error);
       res.status(500).json({ error: 'Server Error' });
-    }});
+}});
 
 // Fallback route for undefined endpoints
 app.use((req, res, next) => {
@@ -224,5 +262,5 @@ app.use((req, res, next) => {
 });
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

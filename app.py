@@ -3,13 +3,11 @@ import json
 from collections import defaultdict
 from transformers import pipeline
 
-# Reading JSON input from stdin
 input_data = json.load(sys.stdin)
 
 transcripts = input_data['transcripts']
 roles = input_data['roles']
 
-# Process the data as you were doing before
 role_texts = defaultdict(str)
 
 for speaker, text in transcripts.items():

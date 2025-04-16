@@ -14,6 +14,12 @@ const meetingSchema = new mongoose.Schema({
     type: Boolean,
     default: false, // Default to `false` (active meeting)
   },
+
+  roleSummaries: {
+    type: Map,
+    of: String, // e.g., { "moderator": "summary text", "attendee": "summary text" }
+    required: true
+  },
 });
 
 const Meeting = mongoose.model('Meeting', meetingSchema);
