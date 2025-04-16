@@ -76,6 +76,26 @@ const startTranscripting = async (meetingId) => {
       transcripts["user" + (i + 1)] = transcript.text;
     }
 
+    // const pythonScriptPath =  './app.py' // Adjust the path accordingly
+    
+    // // Spawn the Python process
+    // const pythonProcess = spawn('python', [pythonScriptPath]);
+    
+    // // Send the JSON data via stdin
+    // const inputData = JSON.stringify({ transcripts, roles });
+    // pythonProcess.stdin.write(inputData);
+    // pythonProcess.stdin.end();
+    
+    // // Capture and display Python script output
+    // pythonProcess.stdout.on('data', (data) => {
+    //     console.log(`Output from Python script:\n${data}`);
+    // });
+    
+    // // Handle errors
+    // pythonProcess.stderr.on('data', (data) => {
+    //     console.error(`Error from Python script: ${data}`);
+    // });
+    
     console.log(transcripts) 
 
     const summaryResponse = await axios.post('https://4816-2409-40f2-48-fab2-ac7d-28e9-e721-e339.ngrok-free.app/summarize', {
@@ -135,14 +155,12 @@ const startTranscripting = async (meetingId) => {
     // console.log("Summary:", summary);
     // // Update Meeting document with summary
     // await Meeting.updateOne({ _id: meetingId }, { $set: { summary, transcript: transcript.text } });
+    // Bhargav
 
   } catch (error) {
     console.error('Error during transcription/summarization:', error);
   }
 };
-
-startTranscripting("67ff2cde06d880e51c243880"); 
-
 
 
 // Route to create a meeting
@@ -245,9 +263,25 @@ app.get('/meeting-transcript/:id', async (req, res) => {
       transcripts.push(audio[i].transcriptText);
     }
     const meeting = await Meeting.findOne({ _id: id });
+    let conversation = "Not available";
+    try {
+      const convoRes = await axios.post(
+        'https://4816-2409-40f2-48-fab2-ac7d-28e9-e721-e339.ngrok-free.app/convert-to-conversation',
+        {
+          transcripts: {
+            user1: transcripts[0],
+            user2: transcripts[1]
+          }
+        }
+      );
+      conversation = convoRes.data.conversation || "No conversation generated";
+    } catch (convErr) {
+      console.error("❌ Error calling convert-to-conversation API:", convErr.message);
+    }
       res.status(200).json({
         transcripts,
         summary: meeting.roleSummaries || "No summary available",
+        conversation
       });
     }
     catch (error) {
