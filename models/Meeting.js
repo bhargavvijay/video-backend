@@ -18,7 +18,7 @@ const meetingSchema = new mongoose.Schema({
   roleSummaries: {
     type: Map,
     of: String, // e.g., { "moderator": "summary text", "attendee": "summary text" }
-    required: true
+    required: false
   },
 });
 
